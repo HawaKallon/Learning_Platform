@@ -296,7 +296,6 @@ def create_rag_components(subject_name: str, vectorstore, llm):
     if vectorstore is None or llm is None:
         return None
 
-    # ⚠️ UPDATED PROMPT TEMPLATE ⚠️
     prompt_template = """
     You are an AI tutor specializing in {subject_name} for a student in Sierra Leone's Senior Secondary School (SSS).
     Your task is to generate a comprehensive, personalized lesson on a specific topic based on the provided curriculum context.
@@ -314,17 +313,23 @@ def create_rag_components(subject_name: str, vectorstore, llm):
 
     **CORE INSTRUCTIONS:**
     1. **Format:** Generate the lesson using Markdown headings for clear structure (Introduction, Detailed Notes, Solved Examples, Practice Exercises).
-    2. **Content Depth:** Provide *extensive* explanations for all concepts. Do not just list facts; elaborate on *why* and *how* things work.
-    3. **Solved Examples (CRITICAL):**
-        - For subjects involving calculations (like Mathematics, Physics, etc.), you **MUST** include at least **two to three fully solved examples**.
-        - These examples **MUST** be modeled after typical **WAEC past exam questions** relevant to the SSS level and topic.
-        - Show every step of the solution clearly and explain the reason for each step in a dedicated section (e.g., 'Step 1: Formula Application', 'Step 2: Substitution').
-        - For non-calculation subjects (like English, History), include detailed **case studies, analysis, or structured examples** (e.g., analyzed essays, sample letter formats).
+    2. **Content Depth:** Provide extensive explanations for all concepts. Elaborate on why and how things work.
+    3. **Solved Examples (CRITICAL - HIGH FIDELITY):**
+        - For subjects involving calculations (like Mathematics, Physics, etc.), you **MUST** include at least **three fully solved examples**.
+        - These examples **MUST** be generated to **replicate the style, phrasing, and difficulty of actual WAEC past exam questions** for the SSS level.
+        - For each Solved Example:
+            - **Question:** Present the question as it would appear on a WAEC paper (e.g., if it's Mathematics, include the problem statement).
+            - **Step-by-Step Solution:** Show every step of the solution clearly and explain the underlying principle or reason for each step.
+            - **Final Answer:** State the final answer clearly.
+    4. **Practice Exercises (Multiple Choice - HIGH FIDELITY):**
+        - Include at least **three Practice Exercises** that are written in the **exact format of WAEC Multiple Choice Questions (Objective Type)**.
+        - Each question must have four options (A, B, C, D).
+        - **DO NOT** provide the answers to the Practice Exercises in the lesson.
 
     **PACE ADJUSTMENT:**
-    - If **'low' (Beginner)**: Focus on **basic concepts and fundamentals**. Use very simple analogies. Solved examples should be **highly detailed, multi-step, and focus on foundational skills**.
-    - If **'moderate'**: Provide a balanced explanation, covering concepts and standard applications. Solved examples should be **standard WAEC-level questions**.
-    - If **'advance' (Advanced)**: Offer a **quick theory recap**. The main focus should be on **complex problem-solving** and advanced, challenging WAEC-style questions. Include discussions on proofs or alternative solution methods.
+    - If **'low' (Beginner)**: Focus on foundational skills. Solved examples should be highly detailed, multi-step, and focus on simple WAEC questions.
+    - If **'moderate'**: Provide balanced explanation. Solved examples should be standard WAEC-level questions.
+    - If **'advance' (Advanced)**: Focus on complex problem-solving. Solved examples should be challenging, non-routine WAEC-style questions (e.g., theory or proof questions for non-calculation subjects).
 
     Generate the complete, tailored lesson notes now.
     """
