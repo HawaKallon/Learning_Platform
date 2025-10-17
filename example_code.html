@@ -4,8 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🇸🇱 SSS AI Tutor Client</title>
-    <!-- Marked.js for Markdown parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
       * {
         margin: 0;
@@ -299,14 +302,17 @@
         }
       }
 
-      .print-btn {
-        background: #4caf50;
+      /* Updated style for download button */
+      .download-btn {
+        background: #dc3545; /* Red/Maroon color for PDF download */
         margin-top: 20px;
         display: none;
       }
 
-      .print-btn:hover {
-        background: #45a049;
+      .download-btn:hover:not(:disabled) {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(220, 53, 69, 0.3);
       }
 
       @media print {
@@ -398,14 +404,89 @@
             Enter the lesson details and click 'Generate Lesson' to begin.
           </p>
         </div>
-        <button class="print-btn" id="print-btn" onclick="window.print()">
-          🖨️ Print Lesson
+        <button
+          class="download-btn"
+          id="download-btn"
+          onclick="downloadLesson()"
+        >
+          ⬇️ Download Lesson (PDF)
         </button>
       </div>
     </div>
 
     <script>
+      // Initialize jsPDF outside of the function
+      const { jsPDF } = window.jspdf;
       const API_URL = "http://0.0.0.0:8002/lesson";
+      
+      // Store the topic for filename generation
+      let globalTopic = "";
+
+      // Function to handle the download (now for PDF)
+      async function downloadLesson() {
+        const lessonElement = document.getElementById("lesson-content");
+
+        if (!lessonElement.children.length || lessonElement.querySelector('.placeholder-text')) {
+          alert("No lesson content available to download. Please generate a lesson first.");
+          return;
+        }
+
+        const topicForFilename = globalTopic
+          .replace(/[^a-z0-9]/gi, "_") // Replace non-alphanumeric with underscore
+          .toLowerCase();
+
+        const filename = `${topicForFilename}_lesson_notes.pdf`;
+        
+        // Temporarily hide the download button to prevent it from appearing in the PDF
+        const downloadBtn = document.getElementById("download-btn");
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = "Processing PDF...";
+
+        try {
+          // Use html2canvas to convert the lesson content HTML to a canvas image
+          const canvas = await html2canvas(lessonElement, {
+            scale: 2, // Higher scale for better resolution
+            useCORS: true,
+            allowTaint: true,
+            scrollY: -window.scrollY // Ensure it captures from the top of the element
+          });
+          
+          const imgData = canvas.toDataURL('image/png');
+          
+          // A4 dimensions (210mm x 297mm)
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          
+          // Calculate the height of the image in the PDF to maintain aspect ratio
+          const imgProps = pdf.getImageProperties(imgData);
+          const imgWidth = pdfWidth - 20; // 10mm margin on both sides
+          const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+          let heightLeft = imgHeight;
+          let position = 10; // Initial position (top margin)
+
+          // Add the image to the PDF, handling multi-page content
+          pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+          heightLeft -= (pdfHeight - position);
+
+          while (heightLeft >= 0) {
+            position = heightLeft - imgHeight + 10;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - 10);
+          }
+          
+          pdf.save(filename);
+
+        } catch (error) {
+          console.error("PDF Generation Error:", error);
+          alert("Error generating PDF. Please check the console for details.");
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.innerHTML = "⬇️ Download Lesson (PDF)";
+        }
+      }
+
 
       async function requestLesson() {
         const subject = document.getElementById("subject-select").value;
@@ -416,7 +497,10 @@
         const lessonContent = document.getElementById("lesson-content");
         const submitBtn = document.getElementById("submit-btn");
         const statusMessage = document.getElementById("status-message");
-        const printBtn = document.getElementById("print-btn");
+        const downloadBtn = document.getElementById("download-btn");
+
+        // Set global topic for filename
+        globalTopic = topic;
 
         if (!topic) {
           statusMessage.className = "status-bar error";
@@ -449,7 +533,7 @@
         statusMessage.className = "status-bar loading";
         statusMessage.innerHTML =
           "⏳ Status: Generating lesson... Please wait.";
-        printBtn.style.display = "none";
+        downloadBtn.style.display = "none";
 
         try {
           const response = await fetch(API_URL, {
@@ -484,7 +568,7 @@
 
           statusMessage.className = "status-bar success";
           statusMessage.innerHTML = "✅ Status: Lesson generated successfully!";
-          printBtn.style.display = "block";
+          downloadBtn.style.display = "block";
         } catch (error) {
           console.error("Fetch Error:", error);
           lessonContent.innerHTML = `
