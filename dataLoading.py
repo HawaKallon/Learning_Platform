@@ -446,30 +446,51 @@ def get_available_subjects() -> list:
 # ----------------------------
 # MAIN INITIALIZATION ON STARTUP
 # ----------------------------
+# def initialize_all_vectorstores():
+#     """Initializes vectorstores for all available subjects."""
+#     global GLOBAL_VECTORSTORES
+#     subjects = get_available_subjects()
+    
+#     print("\n" + "#" * 80)
+#     print("📦 BATCH INITIALIZATION: Checking all available curriculum subjects...")
+#     print("#" * 80)
+
+#     success_count = 0
+    
+#     for subject in subjects:
+#         print(f"--- Processing Subject: {subject} ---")
+#         vectorstore, _ = initialize_vectorstore(subject)
+        
+#         if vectorstore:
+#             GLOBAL_VECTORSTORES[subject] = vectorstore
+#             success_count += 1
+            
+#     print("\n" + "#" * 80)
+#     print(f"🎉 BATCH INITIALIZATION COMPLETE: {success_count} / {len(subjects)} subjects ready.")
+#     print("#" * 80 + "\n")
+
+#     return subjects
+    
+# # Initialize all on import
+# AVAILABLE_SUBJECTS = initialize_all_vectorstores()
+
+
 def initialize_all_vectorstores():
-    """Initializes vectorstores for all available subjects."""
+    """
+    Quick check of available subjects WITHOUT initializing them.
+    Actual initialization happens on first use (lazy loading).
+    """
     global GLOBAL_VECTORSTORES
     subjects = get_available_subjects()
     
     print("\n" + "#" * 80)
-    print("📦 BATCH INITIALIZATION: Checking all available curriculum subjects...")
+    print("📦 DISCOVERED CURRICULUM SUBJECTS (Lazy Loading Enabled)")
     print("#" * 80)
-
-    success_count = 0
-    
-    for subject in subjects:
-        print(f"--- Processing Subject: {subject} ---")
-        vectorstore, _ = initialize_vectorstore(subject)
-        
-        if vectorstore:
-            GLOBAL_VECTORSTORES[subject] = vectorstore
-            success_count += 1
-            
-    print("\n" + "#" * 80)
-    print(f"🎉 BATCH INITIALIZATION COMPLETE: {success_count} / {len(subjects)} subjects ready.")
+    print(f"✓ Found {len(subjects)} subject(s): {', '.join(subjects)}")
+    print("ℹ️  Vectorstores will initialize on first request (lazy loading)")
     print("#" * 80 + "\n")
 
     return subjects
-    
-# Initialize all on import
+
+# Initialize on import (just discovers subjects, doesn't load vectorstores)
 AVAILABLE_SUBJECTS = initialize_all_vectorstores()
