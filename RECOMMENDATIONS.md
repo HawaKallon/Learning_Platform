@@ -308,6 +308,13 @@ By implementing the structure and practices above, the system will be more maint
   - Generative diagrams/equations: integrate with tools for math rendering and figure generation.
   - Speech interface: voice-based tutoring; TTS for accessibility and mobile use.
 
+### 11.1 Curriculum Expansion (More Subjects and JSS Levels)
+
+- New subjects: add PDFs under `curriculum_data/<NewSubject>/` and rebuild vectorstores; the discovery mechanism (`get_available_subjects`) will pick them up automatically.
+- Additional classes/levels: extend level enums and UI to include `JSS 1`, `JSS 2`, `JSS 3` alongside `SSS 1–3`. Ensure prompts accept `{level}` generically and retrieval queries include the appropriate level token (e.g., “JSS 2 English ...”).
+- Per-level tuning: allow per-level chunking parameters and retrieval `k`; maintain separate evaluation sets for JSS vs SSS.
+- Roadmap tie-in: expose `/subjects` and support per-subject/level rebuilds; include JSS topics in diagnostics and learning paths.
+
 ---
 
 ## 12) Product Flow Aligned to Onboarding and Daily Sessions (No Chatbot)
@@ -420,7 +427,7 @@ Data models (sketch)
 - Dashboard: `GET /dashboard/{user}`
 - Notifications: `POST /notifications/teacher`
 
-### 12.6 UI Notes (No Chatbot)
+### 12.6 UI Notes
 
 - Replace free-form chat with:
   - Contextual “Get Hint” button per exercise with tiered hints
@@ -429,3 +436,84 @@ Data models (sketch)
 - Keep the dashboard concise: today’s lessons, mastery badges, and quick start
 
 This design grounds onboarding and daily learning in clear endpoints and data flows, ensures adaptive behavior without a chatbot, and keeps the system aligned to the SSS syllabus via RAG with citations and local context.
+
+---
+
+## 13) Migration Plan: Current Codebase → Proposed Architecture
+
+This plan maps your existing files to the proposed structure and provides a practical execution order.
+
+### 13.1 File Mapping (Current → Target)
+
+- `dataLoading.py` →
+  - `app/data/vectorstore.py` (build/load/init FAISS, metadata)
+  - `app/data/ingestion.py` (PDF load, chunking)
+  - `app/data/subjects.py` (discover available subjects)
+
+- `rag.py` →
+  - `app/rag/llm.py` (initialize_hf_llm)
+  - `app/rag/prompts.py` (templates and builders)
+  - `app/rag/retrieval.py` (retriever abstraction, k/MMR)
+  - `app/rag/components.py` (create_rag_components)
+  - `app/rag/pipeline.py` (generate_lesson orchestration; remediation & sectional gen)
+
+- `main.py` →
+  - `app/api/server.py` (FastAPI app factory, lifespan, CORS)
+  - `app/api/routers/health.py` (`/`, `/health`, `/status`)
+  - `app/api/routers/lessons.py` (`/lessons/generate`, `/lessons/remediate`)
+  - `app/api/routers/topics.py` (`/topics`, `/subjects`)
+  - Future routers: diagnostics, profiles, learning-path, mastery, dashboard, notifications
+
+- New core
+  - `app/core/config.py` (pydantic-settings)
+  - `app/core/logging.py` (structured logging)
+  - `app/core/errors.py` (exception types + handlers)
+
+- Entry point
+  - `main.py` becomes a thin runner that imports `app/api/server.py`.
+
+### 13.2 Execution Order (Incremental)
+
+1) Core setup
+   - Add `app/core/config.py` (Settings) and wire `.env`/`.env.example`.
+   - Add `app/core/logging.py` and replace prints gradually.
+
+2) Data layer split
+   - Move subject discovery, FAISS build/load, metadata into `app/data/*`.
+   - Keep public functions compatible while refactoring imports in place.
+
+3) RAG split
+   - Extract `initialize_hf_llm` → `app/rag/llm.py`.
+   - Move prompt template → `app/rag/prompts.py`.
+   - Create `retrieval.py`, `components.py`, and `pipeline.py`; route `generate_lesson` through `pipeline`.
+
+4) API modularization
+   - Create `app/api/server.py` and `routers/health.py`, port `/`, `/health`, `/status`.
+   - Create `routers/lessons.py`, port `/lesson` → `/lessons/generate`; add citations in response.
+   - Add `routers/topics.py` for `/topics`, `/subjects`.
+
+5) Product flow endpoints (minimal)
+   - Add diagnostics: `start`, `answer`, `finish` (scaffold only).
+   - Add profiles/learning-path generate and reflow (scaffold only).
+   - Add mastery update and dashboard aggregates (scaffold only).
+
+6) Testing and CI
+   - Introduce `tests/` with unit tests for prompts and retrieval; FastAPI test client for endpoints.
+   - Add formatting/linting/type-check in CI.
+
+7) Deployment
+   - Add Dockerfile and scripts; configure env-based settings; health and metrics.
+
+### 13.3 Data and Storage Notes
+
+- Keep FAISS and PDF flow as-is initially; extract clean interfaces for later swaps.
+- For product features (users, diagnostics, mastery, learning paths):
+  - Start with SQLite via SQLModel or SQLAlchemy; plan for Postgres in production.
+  - Define tables: users, diagnostics, diagnostic_items, diagnostic_results, lessons, exercises, attempts, mastery, learning_paths, learning_path_items.
+- Add migrations (Alembic) once schemas stabilize.
+
+### 13.4 De-risking Tips
+
+- Maintain compatibility layers during refactor (old function names import from new modules).
+- Move one slice at a time; add tests before relocating logic.
+- Feature-flag new endpoints; keep existing `/lesson` operational until parity is reached.
