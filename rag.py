@@ -32,7 +32,7 @@ def initialize_hf_llm():
     print("DEBUG: Initializing HuggingFace LLM...")
     try:
         base_llm = HuggingFaceEndpoint(
-            repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
+            repo_id="mistralai/Mistral-7B-Instruct-v0.3",
             huggingfacehub_api_token=token,
             temperature=0.3,
             max_new_tokens=800,
