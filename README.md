@@ -152,3 +152,42 @@ Feel free to contribute to this project by:
 ## 📄 License
 
 This project is open source and available under the MIT License.
+
+---
+
+## ▶️ Running the API Server (FastAPI)
+
+In addition to the CLI workflow via `rag.py`, you can run the HTTP API server:
+
+```bash
+python main.py
+```
+
+This starts FastAPI (default port 8002 as configured in `main.py`). Useful endpoints:
+- Docs: http://localhost:8000/docs (if you use your own uvicorn run)
+- ReDoc: http://localhost:8000/redoc (if you use your own uvicorn run)
+- Status: http://localhost:8002/status
+- Health: http://localhost:8002/health
+- Lesson generation (POST): http://localhost:8002/lesson
+
+Alternatively, you can start with uvicorn directly:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8002
+```
+
+---
+
+## 🧭 Architecture and Migration Guide
+
+For a detailed plan to evolve this boilerplate into a production-ready, modular architecture (including onboarding/diagnostics flow and daily learning sessions), see:
+
+- `RECOMMENDATIONS.md` — Refactor plan, proposed `app/` module structure, product flow, feature roadmap, and a step-by-step migration mapping from current files to the target layout.
+
+You can adopt the migration incrementally; start with settings/logging, then split the data and RAG layers, followed by API modularization.
+
+---
+
+## 🔐 Environment Configuration
+
+This project uses environment variables for configuration (e.g., Hugging Face token). Create a `.env` file as shown above. The recommendations document also includes a suggested `Settings` class using `pydantic-settings` and a `.env.example` to standardize configuration across environments.
